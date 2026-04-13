@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% set hide_sidebar = true %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="glass-panel auth-card">
+        <h2 style="margin-bottom: 5px;"><i class="fa-solid fa-cloud-arrow-up" style="color: var(--accent);"></i> BackupPilot</h2>
+        <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 30px;">Smart Scheduled Cloud Backups for Businesses.</p>
+        
+        <form id="login-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div style="position: relative;">
+                    <i class="fa-solid fa-user" style="position: absolute; left: 14px; top: 14px; color: var(--text-muted);"></i>
+                    <input type="text" id="username" class="form-control" style="padding-left: 40px;" placeholder="Username" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div style="position: relative;">
+                    <i class="fa-solid fa-lock" style="position: absolute; left: 14px; top: 14px; color: var(--text-muted);"></i>
+                    <input type="password" id="password" class="form-control" style="padding-left: 40px;" placeholder="Password" required>
+                </div>
+            </div>
+            
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 0; cursor: pointer;">
+                    <input type="checkbox" id="remember"> Remember me
+                </label>
+                <a href="#" onclick="showToast('Please ask an Admin to reset your password.', 'info')" style="color: var(--accent); text-decoration: none; font-size: 0.85rem;">Forgot password?</a>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block mb-3" id="login-btn">
+                <span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>
+                <div class="spinner"></div>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const remember = document.getElementById('remember').checked;
+        const btn = document.getElementById('login-btn');
+        
+        btn.classList.add('loading');
+        btn.disabled = true;
+        
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, remember })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                showToast('Login successful! Redirecting...', 'success');
+                setTimeout(() => window.location.href = data.redirect, 1000);
+            } else {
+                showToast(data.message || 'Invalid credentials.', 'error');
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        } catch (err) {
+            showToast('Server connection error.', 'error');
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

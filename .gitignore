@@ -1,0 +1,29 @@
+# Environments
+.env
+.venv
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Database
+*.sqlite3
+*.db
+database.db
+
+# Keys
+*.pem
+*.key
+
+# Compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Deployment
+deploy.zip
+deploy.sh
+
+# IDEs
+.vscode/
+.idea/

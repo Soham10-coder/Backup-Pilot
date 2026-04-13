@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <p>Welcome back, {{ user.username }}!</p>
+</div>
+
+<div class="dashboard-stats" id="stats-container">
+    <!-- Stat cards injected via JS -->
+    <div class="glass-card text-center" style="grid-column: 1 / -1;">
+        <div class="spinner" style="display: inline-block; border-color: rgba(139, 92, 246, 0.3); border-top-color: var(--accent); width: 40px; height: 40px; border-width: 4px;"></div>
+        <p class="mt-2 text-muted">Loading stats...</p>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="glass-card">
+        <h3><i class="fa-solid fa-chart-line" style="color: var(--accent); margin-right: 8px;"></i> Backup Activity (Last 5 Days)</h3>
+        <div style="height: 300px; width: 100%; margin-top: 20px;">
+            <canvas id="activityChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="glass-card">
+        <h3><i class="fa-solid fa-server" style="color: var(--success); margin-right: 8px;"></i> Storage Usage</h3>
+        <div class="mt-4 text-center">
+            <h2 style="font-size: 2.5rem; color: var(--text-main);" id="storage-mb">0 MB</h2>
+            <p class="text-muted">Total Storage Used</p>
+        </div>
+        
+        <div class="mt-4">
+            <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+                <span>Usage</span>
+                <span><span id="usage-pct">0</span>% of 5GB Free Tier</span>
+            </div>
+            <div class="progress-container" style="display: block;">
+                <div class="progress-bar" id="storage-progress" style="width: 0%;"></div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+           <a href="{{ url_for('backup') }}" class="btn btn-primary btn-block">New Backup</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch('/api/storage-stats');
+            const data = await res.json();
+            
+            // Render Stats
+            const isAdmin = {{ 'true' if user.role == 'admin' else 'false' }};
+            const container = document.getElementById('stats-container');
+            
+            container.innerHTML = `
+                ${isAdmin ? `
+                <div class="glass-card stat-card">
+                    <div class="stat-icon primary"><i class="fa-solid fa-users"></i></div>
+                    <div class="stat-details">
+                        <h3>${data.total_users}</h3>
+                        <p>Total Users</p>
+                    </div>
+                </div>` : ''}
+                
+                <div class="glass-card stat-card">
+                    <div class="stat-icon info"><i class="fa-solid fa-cloud"></i></div>
+                    <div class="stat-details">
+                        <h3>${data.total_backups}</h3>
+                        <p>Total Backups</p>
+                    </div>
+                </div>
+                
+                <div class="glass-card stat-card">
+                    <div class="stat-icon success"><i class="fa-solid fa-hard-drive"></i></div>
+                    <div class="stat-details">
+                        <h3 style="font-size: 1.4rem;">${data.total_storage_mb} MB</h3>
+                        <p>Storage Used</p>
+                    </div>
+                </div>
+                
+                <div class="glass-card stat-card">
+                    <div class="stat-icon warning"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <div class="stat-details">
+                        <h3 style="font-size: 1rem;">${data.last_backup === 'Never' ? 'Never' : data.last_backup.split(' ')[0]}</h3>
+                        <p>Last Backup</p>
+                    </div>
+                </div>
+            `;
+            
+            // Storage calculation (5GB = 5120MB)
+            document.getElementById('storage-mb').innerText = `${data.total_storage_mb} MB`;
+            let usagePct = (data.total_storage_mb / 5120) * 100;
+            if(usagePct > 100) usagePct = 100;
+            document.getElementById('usage-pct').innerText = usagePct.toFixed(2);
+            document.getElementById('storage-progress').style.width = `${usagePct}%`;
+            
+            // Chart.js
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.activity_labels.length ? data.activity_labels : ['No Data'],
+                    datasets: [{
+                        label: 'Backups Completed',
+                        data: data.activity_data.length ? data.activity_data : [0],
+                        backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                        borderColor: '#8b5cf6',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { stepSize: 1 }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+            
+        } catch(err) {
+            console.error(err);
+            showToast('Failed to load dashboard data.', 'error');
+            document.getElementById('stats-container').innerHTML = `<div class="glass-card text-center" style="grid-column: 1 / -1;"><p class="text-danger">Failed to load data. API Error.</p></div>`;
+        }
+    });
+</script>
+{% endblock %}

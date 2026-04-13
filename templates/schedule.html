@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Backup Schedule{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Backup Schedule</h1>
+    <p>Configure automated periodic backups.</p>
+</div>
+
+<div class="glass-panel" style="max-width: 600px;">
+    <div style="padding: 24px; border-bottom: 1px solid var(--glass-border);">
+        <h3 style="display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-calendar-alt" style="color: var(--accent);"></i> Schedule Settings
+        </h3>
+    </div>
+    
+    <div style="padding: 24px;">
+        <form id="schedule-form">
+            <div class="form-group">
+                <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);">
+                    <span style="font-weight: 600;">Enable Automatic Backups</span>
+                    <input type="checkbox" id="is_active" {% if schedule and schedule.is_active %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--accent);">
+                </label>
+            </div>
+            
+            <div id="schedule-settings" style="opacity: {% if schedule and schedule.is_active %}1{% else %}0.5{% endif %}; transition: opacity 0.3s;">
+                <div class="form-group">
+                    <label for="folder_path">Directory Path to Backup</label>
+                    <input type="text" id="folder_path" class="form-control" placeholder="Target folder" value="{{ schedule.folder_path if schedule else 'D:\\aws-backup-project\\test-backup' }}" required>
+                </div>
+                
+                <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="frequency">Frequency</label>
+                        <select id="frequency" class="form-control" style="background: rgba(15, 23, 42, 0.8);">
+                            <option value="daily" {% if schedule and schedule.frequency == 'daily' %}selected{% endif %}>Daily</option>
+                            <option value="weekly" {% if schedule and schedule.frequency == 'weekly' %}selected{% endif %}>Weekly (Sunday)</option>
+                            <option value="monthly" {% if schedule and schedule.frequency == 'monthly' %}selected{% endif %}>Monthly (1st)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="backup_time">Time (24h)</label>
+                        <input type="time" id="backup_time" class="form-control" value="{{ schedule.backup_time if schedule else '00:00' }}" required>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary mt-3" id="save-btn">
+                <i class="fa-solid fa-save"></i> <span>Save Schedule</span>
+                <div class="spinner"></div>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const activeToggle = document.getElementById('is_active');
+    const settingsDiv = document.getElementById('schedule-settings');
+    const inputs = settingsDiv.querySelectorAll('input, select');
+    
+    function updateInputs() {
+        if(activeToggle.checked) {
+            settingsDiv.style.opacity = '1';
+            inputs.forEach(i => i.disabled = false);
+        } else {
+            settingsDiv.style.opacity = '0.5';
+            inputs.forEach(i => i.disabled = true);
+        }
+    }
+    
+    activeToggle.addEventListener('change', updateInputs);
+    // Init state
+    if(!activeToggle.checked) inputs.forEach(i => i.disabled = true);
+
+    document.getElementById('schedule-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('save-btn');
+        btn.classList.add('loading');
+        btn.disabled = true;
+        
+        const payload = {
+            is_active: activeToggle.checked,
+            folder_path: document.getElementById('folder_path').value,
+            frequency: document.getElementById('frequency').value,
+            backup_time: document.getElementById('backup_time').value
+        };
+        
+        try {
+            const res = await fetch('/api/save-schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                showToast('Schedule saved and updated successfully.', 'success');
+            } else {
+                showToast(data.message || 'Error saving schedule.', 'error');
+            }
+        } catch(err) {
+            showToast('Connection error.', 'error');
+        } finally {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

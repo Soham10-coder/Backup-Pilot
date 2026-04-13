@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1>User Management</h1>
+        <p>Manage system access and roles.</p>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('add-user-modal').style.display='flex'"><i class="fa-solid fa-user-plus"></i> Add New User</button>
+</div>
+
+<div class="glass-panel">
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Joined At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td>{{ u.id }}</td>
+                    <td style="font-weight: 500;">
+                        <a href="{{ url_for('view_user', id=u.id) }}" style="color: var(--accent); text-decoration: none;">
+                            <i class="fa-solid fa-user-circle"></i> {{ u.username }}
+                        </a>
+                    </td>
+                    <td class="text-muted">{{ u.email }}</td>
+                    <td>
+                        {% if u.role == 'admin' %}
+                            <span class="badge badge-primary">Admin</span>
+                        {% else %}
+                            <span class="badge badge-success">User</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted" style="font-size: 0.9rem;">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <a href="{{ url_for('view_user', id=u.id) }}" class="btn btn-sm btn-primary" title="View details"><i class="fa-solid fa-eye"></i></a>
+                        {% if u.id != current_user.id %}
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser({{ u.id }}, '{{ u.username }}')" title="Delete User"><i class="fa-solid fa-trash"></i></button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add User Modal (Simple CSS overlay) -->
+<div id="add-user-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+    <div class="glass-card" style="width: 100%; max-width: 400px;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 style="margin: 0;">Add New User</h3>
+            <button class="btn btn-sm btn-danger" onclick="document.getElementById('add-user-modal').style.display='none'" style="border-radius: 50%; width: 30px; height: 30px; padding: 0;"><i class="fa-solid fa-times"></i></button>
+        </div>
+        
+        <form id="add-user-form">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="add_username" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="add_email" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="add_password" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="add_role" class="form-control" style="background: rgba(15, 23, 42, 0.8);">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block mt-4" id="add-user-btn">Create User <div class="spinner"></div></button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('add-user-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('add-user-btn');
+        btn.classList.add('loading');
+        btn.disabled = true;
+        
+        const payload = {
+            username: document.getElementById('add_username').value,
+            email: document.getElementById('add_email').value,
+            password: document.getElementById('add_password').value,
+            role: document.getElementById('add_role').value
+        };
+        
+        try {
+            const res = await fetch('/api/add-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if(data.success) {
+                showToast('User created successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(data.message || 'Error creating user.', 'error');
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        } catch(e) {
+            showToast('Connection error.', 'error');
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    });
+
+    async function deleteUser(id, username) {
+        if(!confirm(`Are you sure you want to completely delete user '${username}' and all of their schedules and records? This does not delete their existing AWS backups.`)) return;
+        
+        try {
+            const res = await fetch('/api/delete-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            const data = await res.json();
+            if(data.success) {
+                showToast('User deleted.', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(data.message || 'Error deleting user.', 'error');
+            }
+        } catch(e) {
+            showToast('Connection error.', 'error');
+        }
+    }
+</script>
+{% endblock %}

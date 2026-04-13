@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Settings</h1>
+    <p>Manage your account and preferences.</p>
+</div>
+
+<div class="dashboard-grid">
+    <!-- User Settings -->
+    <div class="glass-panel" style="padding: 24px;">
+        <h3 class="mb-4" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 12px;">
+            <i class="fa-solid fa-user-shield" style="color: var(--accent);"></i> Account Settings
+        </h3>
+        <form id="user-settings-form">
+            <div class="form-group">
+                <label for="new_password">Change Password</label>
+                <input type="password" id="new_password" class="form-control" placeholder="Leave blank to keep unchanged">
+            </div>
+            
+            <div class="form-group mt-4">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="email_notifications" {% if settings.email_notifications %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--accent);">
+                    <span style="font-weight: 600;">Enable Email Notifications</span>
+                </label>
+            </div>
+            
+            <div class="form-group" id="email-field" style="display: {% if settings.email_notifications %}block{% else %}none{% endif %};">
+                <label for="notification_email">Notification Email</label>
+                <input type="email" id="notification_email" class="form-control" placeholder="example@email.com" value="{{ settings.notification_email or '' }}">
+            </div>
+            
+            <button type="submit" class="btn btn-primary mt-3" id="save-user-settings-btn">
+                <i class="fa-solid fa-save"></i> Save Account Info
+                <div class="spinner"></div>
+            </button>
+        </form>
+    </div>
+
+    <!-- Admin Settings (Visible to Admin Only) -->
+    {% if current_user.role == 'admin' %}
+    <div class="glass-panel" style="padding: 24px; border: 1px solid var(--accent);">
+        <h3 class="mb-4" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-brands fa-aws" style="color: #ff9900; font-size: 1.5rem;"></i> Global AWS Config
+        </h3>
+        <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 20px;">These credentials manage where all backups are stored across the entire system. Only Admins can modify this.</p>
+        
+        <form id="admin-settings-form">
+            <div class="form-group">
+                <label for="aws_access_key">AWS Access Key ID</label>
+                <input type="password" id="aws_access_key" class="form-control" placeholder="********************" value="{{ admin_settings.aws_access_key or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="aws_secret_key">AWS Secret Access Key</label>
+                <input type="password" id="aws_secret_key" class="form-control" placeholder="****************************************" value="{{ admin_settings.aws_secret_key or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="bucket_name">S3 Bucket Name</label>
+                <input type="text" id="bucket_name" class="form-control" placeholder="e.g., my-backup-bucket" value="{{ admin_settings.bucket_name or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="region">AWS Region</label>
+                <input type="text" id="region" class="form-control" placeholder="e.g., us-east-1" value="{{ admin_settings.region or 'us-east-1' }}">
+            </div>
+            
+            <button type="submit" class="btn btn-primary mt-3" id="save-admin-settings-btn" style="background:var(--warning); color:#000;">
+                <i class="fa-solid fa-cloud"></i> Save Global AWS Settings
+                <div class="spinner" style="border-top-color: #000;"></div>
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const cb = document.getElementById('email_notifications');
+    const field = document.getElementById('email-field');
+    if (cb) {
+        cb.addEventListener('change', () => {
+            field.style.display = cb.checked ? 'block' : 'none';
+        });
+    }
+
+    async function saveSettings(payload, btnName) {
+        const btn = document.getElementById(btnName);
+        btn.classList.add('loading');
+        btn.disabled = true;
+        try {
+            const res = await fetch('/api/save-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if(data.success) {
+                showToast('Settings saved successfully.', 'success');
+            } else {
+                showToast(data.message || 'Error saving settings.', 'error');
+            }
+        } catch(e) {
+            showToast('Connection error.', 'error');
+        } finally {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    }
+
+    document.getElementById('user-settings-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const payload = {
+            new_password: document.getElementById('new_password').value,
+            email_notifications: document.getElementById('email_notifications').checked,
+            notification_email: document.getElementById('notification_email').value
+        };
+        saveSettings(payload, 'save-user-settings-btn');
+    });
+
+    document.getElementById('admin-settings-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const payload = {
+            aws_access_key: document.getElementById('aws_access_key').value,
+            aws_secret_key: document.getElementById('aws_secret_key').value,
+            bucket_name: document.getElementById('bucket_name').value,
+            region: document.getElementById('region').value
+        };
+        saveSettings(payload, 'save-admin-settings-btn');
+    });
+</script>
+{% endblock %}

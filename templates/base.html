@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BackupPilot{% endblock %} – Automated Cloud Backup System</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Animated Background -->
+    <div id="particles-js"></div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
+
+    {% if not hide_sidebar %}
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-cloud-arrow-up"></i> BackupPilot</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">Smart Scheduled Cloud Backups for Businesses.</p>
+            </div>
+            
+            {% if current_user.is_authenticated %}
+            <div class="user-profile">
+                <div class="avatar">{{ current_user.username[0] | upper }}</div>
+                <div class="user-info">
+                    <h4>{{ current_user.username }}</h4>
+                    <span>{{ current_user.role }}</span>
+                    {% if current_user.role == 'admin' %}
+                        <span class="admin-badge">Admin</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <ul class="nav-links">
+                <div class="nav-section-title">Main</div>
+                <li><a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('backup') }}" class="{% if request.endpoint == 'backup' %}active{% endif %}"><i class="fa-solid fa-cloud-upload-alt"></i> Manual Backup</a></li>
+                <li><a href="{{ url_for('schedule') }}" class="{% if request.endpoint == 'schedule' %}active{% endif %}"><i class="fa-solid fa-clock"></i> Schedule</a></li>
+                <li><a href="{{ url_for('history') }}" class="{% if request.endpoint == 'history' %}active{% endif %}"><i class="fa-solid fa-history"></i> History</a></li>
+                
+                {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                <div class="nav-section-title mt-3">Administration</div>
+                <li><a href="{{ url_for('admin_users') }}" class="{% if request.endpoint and request.endpoint.startswith('admin') %}active{% endif %}"><i class="fa-solid fa-users"></i> Users</a></li>
+                {% endif %}
+                
+                <div class="nav-section-title mt-3">Preferences</div>
+                <li><a href="{{ url_for('settings_page') }}" class="{% if request.endpoint == 'settings_page' %}active{% endif %}"><i class="fa-solid fa-cog"></i> Settings</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fa-solid fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+    {% endif %}
+
+            {% block content %}{% endblock %}
+
+    {% if not hide_sidebar %}
+        </main>
+    </div>
+    {% endif %}
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

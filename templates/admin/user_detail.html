@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}User Details - {{ target_user.username }}{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1>User Profile</h1>
+        <p>Details for {{ target_user.username }}</p>
+    </div>
+    <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-primary"><i class="fa-solid fa-arrow-left"></i> Back to Users</a>
+</div>
+
+<div class="dashboard-grid">
+    <div class="glass-card">
+        <h3 style="border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; margin-bottom: 20px;">
+            <i class="fa-solid fa-id-card" style="color: var(--accent);"></i> Identity
+        </h3>
+        <p><strong>ID:</strong> {{ target_user.id }}</p>
+        <p><strong>Username:</strong> {{ target_user.username }}</p>
+        <p><strong>Email:</strong> {{ target_user.email }}</p>
+        <p><strong>Role:</strong> 
+            {% if target_user.role == 'admin' %}
+                <span class="badge badge-primary">Admin</span>
+            {% else %}
+                <span class="badge badge-success">User</span>
+            {% endif %}
+        </p>
+        <p><strong>Joined:</strong> {{ target_user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    </div>
+
+    <div class="glass-card">
+        <h3 style="border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; margin-bottom: 20px;">
+            <i class="fa-solid fa-chart-bar" style="color: var(--success);"></i> Statistics
+        </h3>
+        {% set total_backups = target_user.backups | length %}
+        <p><strong>Total Backups:</strong> {{ total_backups }}</p>
+        
+        {% set schedules = target_user.schedules %}
+        {% if schedules %}
+            <p><strong>Schedule Active:</strong> {% if schedules[0].is_active %}<span style="color:var(--success);">Yes</span>{% else %}<span style="color:var(--danger)">No</span>{% endif %}</p>
+            <p><strong>Frequency:</strong> <span style="text-transform: capitalize;">{{ schedules[0].frequency }}</span> at {{ schedules[0].backup_time }}</p>
+        {% else %}
+            <p><strong>Schedule:</strong> Not configured</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
