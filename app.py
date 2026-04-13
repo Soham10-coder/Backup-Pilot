@@ -12,6 +12,10 @@ from datetime import datetime
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Initialize database and scheduler outside of __main__ for Gunicorn support
+init_db(app)
+init_scheduler(app)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -365,6 +369,4 @@ def download_backup():
          return jsonify({'success': False, 'message': str(e)}), 400
 
 if __name__ == '__main__':
-    init_db(app)
-    init_scheduler(app)
     app.run(debug=True, use_reloader=False) # set use_reloader=False for apscheduler
