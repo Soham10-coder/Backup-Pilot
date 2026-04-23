@@ -8,18 +8,34 @@ from email.mime.multipart import MIMEMultipart
 
 def create_zip(folder_path):
     if not os.path.exists(folder_path):
-        raise Exception(f"Directory not found: {folder_path}")
+        raise Exception(f"Path not found: {folder_path}")
         
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    folder_name = os.path.basename(os.path.normpath(folder_path))
-    zip_name = f"backup_{folder_name}_{timestamp}.zip"
     
-    with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(folder_path):
-            for file in files:
-                filepath = os.path.join(root, file)
-                arcname = os.path.relpath(filepath, folder_path)
-                zipf.write(filepath, arcname)
+    # Handle single file backup
+    if os.path.isfile(folder_path):
+        filename = os.path.basename(folder_path)
+        zip_name = f"backup_file_{filename}_{timestamp}.zip"
+        
+        with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            zipf.write(folder_path, filename)
+            
+    # Handle directory backup
+    else:
+        folder_name = os.path.basename(os.path.normpath(folder_path))
+        if not folder_name: # if folder_path is a drive root like 'C:\'
+            folder_name = "drive_root"
+        zip_name = f"backup_dir_{folder_name}_{timestamp}.zip"
+        
+        with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(folder_path):
+                for file in files:
+                    filepath = os.path.join(root, file)
+                    # Create arcname so it includes the parent folder name
+                    # and ensure forward slashes for cross-platform compatibility
+                    rel_path = os.path.relpath(filepath, folder_path)
+                    arcname = os.path.join(folder_name, rel_path).replace('\\', '/')
+                    zipf.write(filepath, arcname)
     
     file_size_bytes = os.path.getsize(zip_name)
     file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
